@@ -43,8 +43,8 @@ def teardown_request(exception):
 
 @app.route('/')
 def show_status():
-    osx_status = subprocess.check_output(["uname", "-a"])
-    return render_template('show_status.html', status=osx_status)
+    td_status = subprocess.check_output(["service", "transmission-daemon", "status"])
+    return render_template('show_status.html', status=td_status)
 
 @app.route('/add', methods=['POST'])
 def add_entry():
