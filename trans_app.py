@@ -2,7 +2,6 @@ import sqlite3
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 from contextlib import closing
-#import os
 import subprocess
 
 # configuration
@@ -12,7 +11,7 @@ SECRET_KEY = 'jetplane'
 USERNAME = 'admin'
 PASSWORD = 'jetplane'
 
-# create our little application :)
+# create flask app
 app = Flask(__name__)
 app.config.from_object(__name__)
 
@@ -35,16 +34,25 @@ def teardown_request(exception):
     if db is not None:
         db.close()
 
-#@app.route('/')
-#def show_entries():
-#    cur = g.db.execute('select title, text from entries order by id desc')
-#    entries = [dict(title=row[0], text=row[1]) for row in cur.fetchall()]
-#    return render_template('show_entries.html', entries=entries)
-
 @app.route('/')
 def show_status():
     td_status = subprocess.check_output(["service", "transmission-daemon", "status"])
-    return render_template('show_status.html', status=td_status)
+    return render_template('show_status.html', status=td_status.decode("utf-8"))
+
+@app.route('/start', methods=['POST'])
+def start():
+    td_start = subprocess.check_output(["sudo", "service", "transmission-daemon", "start"])
+    message = 'Status: ' + td_start.decode("utf-8")
+    flash('start command issued')   
+    return redirect(url_for('show_status'))
+
+@app.route('/stop', methods=['POST'])
+def stop():
+    td_stop = subprocess.check_output(["sudo", "service", "transmission-daemon", "stop"])
+    #message = 'Status: ' + td_stop.decode("utf-8")
+    #flash(message)   
+    flash('stop command issued')   
+    return redirect(url_for('show_status'))
 
 @app.route('/add', methods=['POST'])
 def add_entry():
@@ -54,7 +62,7 @@ def add_entry():
                 [request.form['title'], request.form['text']])
     g.db.commit()
     flash('New entry was successfully posted')
-    return redirect(url_for('show_entries'))
+    return redirect(url_for('show_status'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -67,14 +75,14 @@ def login():
         else:
             session['logged_in'] = True
             flash('You were logged in')
-            return redirect(url_for('show_entries'))
+            return redirect(url_for('show_status'))
     return render_template('login.html', error=error)
 
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)
     flash('You have been logged out')   
-    return redirect(url_for('show_entries'))
+    return redirect(url_for('show_status'))
 
 
 if __name__ == '__main__':
